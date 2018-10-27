@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Audio;
 
-//Ajout du commentaire - commit, extension GitHub installée sur VS
+//Commentaire extra - GitHub Desktop utilisé pour ce repository
 
 namespace GetGoodMonogame
 {
