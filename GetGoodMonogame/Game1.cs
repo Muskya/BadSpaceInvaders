@@ -22,12 +22,13 @@ namespace GetGoodMonogame
         private SpriteFont gameFont;
 
         // CLASSES INSTANCIATIONS
-        Projectile projectile; 
+        Projectile projectile;
 
         // TEXTURES
-        private Texture2D projectileTexture1; 
+        private Texture2D projectileSprite;
         private Texture2D playerSprite;
         private Texture2D brick;
+
         private Texture2D rocketIcon;
         private Vector2 rocketIconPos = new Vector2(-5, 570);
 
@@ -41,6 +42,7 @@ namespace GetGoodMonogame
         // PLAYER PROPERTIES
         private float playerSpeed = 150.0f;
         private Vector2 playerPosition;
+
         //shooting:
         private float shootCooldown;
 
@@ -58,6 +60,10 @@ namespace GetGoodMonogame
         protected override void Initialize()
         {
             playerPosition = new Vector2(screen_width/2, screen_height/2);
+            //playerPosition.X - 15.5f, playerPosition.Y - 20 ||| Projectile position to actually be at the right position under the space ship
+            projectile = new Projectile();
+            projectile.ActivateProjectile(projectileSprite);
+
             bgmPlayable = true;
             shootCooldown = 2.5f;
 
@@ -72,7 +78,7 @@ namespace GetGoodMonogame
             //player content:
             playerSprite = Content.Load<Texture2D>("ship");
             rocketIcon = Content.Load<Texture2D>("rocket");
-            projectileTexture1 = Content.Load<Texture2D>("projectile");
+            projectile.projectileSprite = Content.Load<Texture2D>("rocket");
 
             //sound content:
             bgm = Content.Load<SoundEffect>("BGM");
@@ -90,12 +96,14 @@ namespace GetGoodMonogame
         // Game's main loop
         protected override void Update(GameTime gameTime)
         {
+            #region BGM
             // Playing BGM
             //if (bgmPlayable == true)
             //{
             //    bgmPlayable = false; //PlaysOnlyOnce
             //    bgm.Play();
             //}
+            #endregion
 
             // Exits the game when pressing Esc
             if (Keyboard.GetState().IsKeyDown(Keys.Escape))
@@ -103,13 +111,26 @@ namespace GetGoodMonogame
 
             // Shooting + cooldown system
             shootCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (Keyboard.GetState().IsKeyDown(Keys.Space) && shootCooldown <= 0) {
-                projectileShot = true;
-                new Projectile(2f, projectileTexture1, playerPosition);
-                //projectile.projectileTranslation();
+            if (Keyboard.GetState().IsKeyDown(Keys.Space) && shootCooldown <= 0)
+            {
+                projectile.SetPosition(new Vector2(playerPosition.X - 15.5f,
+                    playerPosition.Y - 20));
+                projectile.projectileIsShot = true;
+
                 shootSound.Play();
                 shootCooldown = 2.5f;
             }
+
+            if (projectile.projectileIsActive && projectile.projectileIsShot)
+            {
+                projectile.projectilePosition.Y -= 5;
+                //projectile.Update(gameTime);
+            }
+
+            //if (projectile.projectilePosition.Y < -30)
+            //    projectile.Kill();
+            //if (projectile.projectilePosition.X < -30 || projectile.projectilePosition.X > 530)
+            //    projectile.Kill();
 
             //blocks the timing at 0sec:
             if (shootCooldown <= 0) {
@@ -135,11 +156,18 @@ namespace GetGoodMonogame
             GraphicsDevice.Clear(Color.Black);
 
             spriteBatch.Begin();
+
             spriteBatch.DrawString(gameFont, "Cooldown: " + shootCooldown.ToString("F0") + " sec", new Vector2(rocketIconPos.X + 28, 578), Color.White);
             spriteBatch.Draw(rocketIcon, rocketIconPos, Color.White);
-            spriteBatch.Draw(playerSprite, playerPosition, null, Color.White, 0f, new Vector2(playerSprite.Width / 2, playerSprite.Height / 2), Vector2.One, SpriteEffects.None, 1f);
+            spriteBatch.Draw(playerSprite, playerPosition, null, Color.White, 0f, new Vector2(playerSprite.Width / 2, playerSprite.Height / 2),
+                Vector2.One, SpriteEffects.None, 0.1f);
+            //projectile.Draw(gameTime, spriteBatch, projectileSprite);
 
-            //spriteBatch.Draw(projectile.projectileSprite, playerPosition, Color.White);
+            if (projectile.projectileIsActive && projectile.projectileIsShot)
+            {
+                spriteBatch.Draw(projectile.projectileSprite, projectile.projectilePosition,
+                Color.White);
+            }
 
             spriteBatch.End();
 

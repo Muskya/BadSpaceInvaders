@@ -1,33 +1,79 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using Microsoft.Xna.Framework.Audio;
-
 namespace GetGoodMonogame
 {
-    class Projectile
+    public class Projectile
     {
-        public float speed;
-        public Texture2D projectileSprite;
-        public Vector2 projectilePosition;
+        //projectile
+        public Texture2D projectileSprite; //Sprite of the projectile
+        private Vector2 projectileTarget; //Position of the target
+        public Vector2 projectilePosition; //Position of the projectile
+        private Vector2 projectileVelocity; //Velocity of the projectile
+        public bool projectileIsActive; //Is the projectile Active ?
+        public bool projectileIsShot = false;
+        private float projectileSpeed; //Speed of the projectile
+        public Rectangle projectileRectangle; //Rectangle of the projectile
 
-        public Projectile(float speed, Texture2D t2D, Vector2 pos)
+        public Projectile()
         {
-            this.speed = speed;
-            projectileSprite = t2D;
-            projectilePosition = pos;
+            projectileIsActive = false;
         }
 
-        public void projectileTranslation()
+        public void ActivateProjectile(Texture2D texture)
         {
-            //On Y Axis  (-= because it goes from the bottom to the top)
-            this.projectilePosition.Y -= this.projectileSprite.Height * this.speed;
+            projectileTarget = new Vector2(projectilePosition.X, projectilePosition.Y - 100);
+            //projectilePosition = pos;
+            projectileSprite = texture;
+
+            SetVelocity();
+
+            projectileSpeed = 200;
+            projectileIsActive = true;
         }
+
+        public void SetPosition(Vector2 pos)
+        {
+            this.projectilePosition = pos;
+        }
+
+        private void SetVelocity()
+        {
+            projectileVelocity = -(projectilePosition - projectileTarget);
+            projectileVelocity.Normalize();
+        }
+
+
+        public void Update(GameTime gameTime)
+        {
+            float elapsedTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (projectilePosition.Y < -30)
+                Kill();
+            if (projectilePosition.X < -30 || projectilePosition.X > 530)
+                Kill();
+
+            projectilePosition += (projectileVelocity * projectileSpeed * elapsedTime);
+            projectileRectangle = new Rectangle((int)projectilePosition.X, (int)projectilePosition.Y, projectileSprite.Width, projectileSprite.Height);
+        }
+
+        public void Draw(GameTime gameTime, SpriteBatch spriteBatch, Texture2D texture)
+        {
+            spriteBatch.Draw(texture, projectilePosition, Color.White);
+        }
+    
+        public void Kill()
+        {
+            projectileIsActive = false;
+            projectileIsShot = false;
+        }
+
     }
 }
