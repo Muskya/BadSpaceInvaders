@@ -33,8 +33,6 @@ namespace GetGoodMonogame
 
         #region CLASSES
         // CLASSES INSTANCIATIONS
-        private int i;
-        Projectile p;
         List<Projectile> projectilesOnScreen;
 
         #endregion
