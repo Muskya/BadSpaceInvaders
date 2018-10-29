@@ -12,67 +12,44 @@ namespace GetGoodMonogame
 {
     public class Projectile
     {
-        //projectile
-        public Texture2D projectileSprite; //Sprite of the projectile
-        private Vector2 projectileTarget; //Position of the target
-        public Vector2 projectilePosition; //Position of the projectile
-        private Vector2 projectileVelocity; //Velocity of the projectile
-        public bool projectileIsActive; //Is the projectile Active ?
-        public bool projectileIsShot = false;
-        private float projectileSpeed; //Speed of the projectile
-        public Rectangle projectileRectangle; //Rectangle of the projectile
+        
+        //FIELDS
+        public Texture2D _texture; //Sprite of the projectile
+        public Vector2 _position; //Position of the projectile
 
-        public Projectile()
+        private Vector2 _velocity; //Velocity of the projectile
+        private float _speed; //Speed of the projectile
+
+        public bool _isShot = false;
+        public bool _isOnScreen = false;
+
+        public Color _color;
+
+        List<Projectile> projectilesOnScreen;
+
+        //METHODS
+        public Projectile(Texture2D texture, Vector2 startPos)
         {
-            projectileIsActive = false;
+           _color = Color.White;
+            this._texture = texture;
+            this._position = startPos;
+           projectilesOnScreen = new List<Projectile>();
+
         }
-
-        public void ActivateProjectile(Texture2D texture)
-        {
-            projectileTarget = new Vector2(projectilePosition.X, projectilePosition.Y - 100);
-            //projectilePosition = pos;
-            projectileSprite = texture;
-
-            SetVelocity();
-
-            projectileSpeed = 200;
-            projectileIsActive = true;
-        }
-
-        public void SetPosition(Vector2 pos)
-        {
-            this.projectilePosition = pos;
-        }
-
-        private void SetVelocity()
-        {
-            projectileVelocity = -(projectilePosition - projectileTarget);
-            projectileVelocity.Normalize();
-        }
-
 
         public void Update(GameTime gameTime)
         {
-            float elapsedTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            this._position.Y -= 5;
 
-            if (projectilePosition.Y < -30)
-                Kill();
-            if (projectilePosition.X < -30 || projectilePosition.X > 530)
-                Kill();
-
-            projectilePosition += (projectileVelocity * projectileSpeed * elapsedTime);
-            projectileRectangle = new Rectangle((int)projectilePosition.X, (int)projectilePosition.Y, projectileSprite.Width, projectileSprite.Height);
+            if (this._position.Y < -30)
+            {
+                projectilesOnScreen.Remove(this);
+            }
         }
 
-        public void Draw(GameTime gameTime, SpriteBatch spriteBatch, Texture2D texture)
+        public void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
-            spriteBatch.Draw(texture, projectilePosition, Color.White);
-        }
-    
-        public void Kill()
-        {
-            projectileIsActive = false;
-            projectileIsShot = false;
+            spriteBatch.Draw(this._texture, this._position, _color);
         }
 
     }
