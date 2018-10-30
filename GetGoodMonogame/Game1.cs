@@ -20,6 +20,7 @@ namespace GetGoodMonogame
         // SCREEN PROPERTIES
         GraphicsDeviceManager graphics; // L'écran en gros 
         SpriteBatch spriteBatch; // Layer d'affichage 
+        
         //window's dimensions:
         private int screen_width = 500; 
         private int screen_height = 600;
@@ -34,6 +35,8 @@ namespace GetGoodMonogame
         #region CLASSES
         // CLASSES INSTANCIATIONS
         List<Projectile> projectilesOnScreen;
+        List<Star> starsOnScreen;
+        Random randomStarPos;
 
         #endregion
 
@@ -41,6 +44,11 @@ namespace GetGoodMonogame
         // TEXTURES
         private Texture2D projectileSprite;
         private Texture2D playerSprite;
+
+        private Texture2D star1;
+        public int _randomPosX;
+        public int _randomPosY;
+        public double _randomStarSpeedY;
 
         private Texture2D rocketIcon;
         private Vector2 rocketIconPos = new Vector2(-5, 570);
@@ -64,7 +72,6 @@ namespace GetGoodMonogame
         private float shootCooldown;
         #endregion
 
-
         // Constructeur du jeu
         public Game1()
         {
@@ -73,8 +80,8 @@ namespace GetGoodMonogame
             graphics.PreferredBackBufferWidth = screen_width; // 500px width
 
             Content.RootDirectory = "Content";
-
             projectilesOnScreen = new List<Projectile>();
+            starsOnScreen = new List<Star>();
         }
 
         // Initialize game logic
@@ -89,6 +96,17 @@ namespace GetGoodMonogame
             #region ENVIRONMENT
             //ENVIRONMENT INITIALIZATION
             bgmPlayable = true;
+
+            star1 = Content.Load<Texture2D>("star1");
+            randomStarPos = new Random();
+  
+            for(int i = 0; i < 20; i++)
+            {
+                this._randomPosX = randomStarPos.Next(1, 500);
+                this._randomPosY = randomStarPos.Next(1, 600);
+                this._randomStarSpeedY = randomStarPos.NextDouble() * (1f - 0.15f) + 0.15f;
+                RandomStars(star1, this._randomPosX, this._randomPosY, this._randomStarSpeedY);
+            }
             #endregion
 
             #region GAMEPLAY
@@ -116,6 +134,7 @@ namespace GetGoodMonogame
 
             //environment content:
             gameFont = Content.Load<SpriteFont>("gameFont");
+            
         }
         protected override void UnloadContent(){}
 
@@ -181,13 +200,19 @@ namespace GetGoodMonogame
                 }
             }
 
+            foreach (Star s in starsOnScreen)
+            {
+                _randomStarSpeedY = randomStarPos.NextDouble() * (1f - 0.15f) + 0.15f;
+                s.Update(gameTime, _randomStarSpeedY);
+            }
+
             base.Update(gameTime);
         }
 
         // Draw to screen EACH frame (60 fps by default)
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.Black);
+            graphics.GraphicsDevice.Clear(Color.Black);
 
             spriteBatch.Begin();
 
@@ -202,7 +227,11 @@ namespace GetGoodMonogame
                 {
                     p.Draw(gameTime, spriteBatch);
                 }
-                
+            }
+
+            foreach(Star s in starsOnScreen)
+            {
+                s.Draw(gameTime, spriteBatch);
             }
 
             spriteBatch.End();
@@ -212,8 +241,14 @@ namespace GetGoodMonogame
 
         public void ShootBullet(Texture2D texture, Vector2 startPos)
         {
-            Projectile p = new Projectile(texture, startPos);
-            projectilesOnScreen.Add(p);
+            Projectile projectile = new Projectile(texture, startPos);
+            projectilesOnScreen.Add(projectile);
+        }
+
+        public void RandomStars(Texture2D texture, int rdmPosX, int rdmPosY, double rdmYSpeed)
+        {
+            Star star = new Star(texture, rdmPosX, rdmPosY, rdmYSpeed);
+            starsOnScreen.Add(star);
         }
     }
 }

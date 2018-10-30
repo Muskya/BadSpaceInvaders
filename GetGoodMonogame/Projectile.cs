@@ -17,8 +17,8 @@ namespace GetGoodMonogame
         public Texture2D _texture; //Sprite of the projectile
         public Vector2 _position; //Position of the projectile
 
-        private Vector2 _velocity; //Velocity of the projectile
-        private float _speed; //Speed of the projectile
+        //private Vector2 _velocity; //Velocity of the projectile
+        //private float _speed; //Speed of the projectile
 
         public bool _isShot = false;
         public bool _isOnScreen = false;
