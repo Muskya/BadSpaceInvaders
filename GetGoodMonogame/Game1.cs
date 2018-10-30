@@ -10,14 +10,13 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
 
-//Commentaire extra - GitHub Desktop utilisé pour ce repository
-
 namespace GetGoodMonogame
 {
     public class Game1 : Game
     {
+        #region PROPERTIES
+        //SCREEN PROPERTIES
         #region SCREEN
-        // SCREEN PROPERTIES
         GraphicsDeviceManager graphics; // L'écran en gros 
         SpriteBatch spriteBatch; // Layer d'affichage 
         
@@ -26,80 +25,95 @@ namespace GetGoodMonogame
         private int screen_height = 600;
         #endregion
 
+        //GAME PROPERTIES
         #region GAME
-        // GAME PROPERTIES
         private bool bgmPlayable = false;
         private SpriteFont gameFont;
         #endregion
 
+        //CLASSES INSTANCIATIONS AND PROPERTIES
         #region CLASSES
-        // CLASSES INSTANCIATIONS
-        List<Projectile> projectilesOnScreen;
-        List<Star> starsOnScreen;
-        Random randomStarPos;
+        List<Projectile> projectilesOnScreen; //Rockets shot on the screen
+        List<Star> starsOnScreen; //Infinite-scrolling stars on the screen
+        //List<Enemy> enemiesOnScreen; //Enemies on the screen
 
+        //Random variable to set random X and Y star positions
+        Random randomStarPos;
         #endregion
 
+        //TEXTURES PROPERTIES
         #region TEXTURE
-        // TEXTURES
         private Texture2D projectileSprite;
         private Texture2D playerSprite;
 
+        //Environment stars properties
         private Texture2D star1;
         public int _randomPosX;
         public int _randomPosY;
         public double _randomStarSpeedY;
 
         private Texture2D rocketIcon;
+        //The rocket icon position at the bottom of the screen
         private Vector2 rocketIconPos = new Vector2(-5, 570);
         #endregion
 
+        //SOUNDS PROPERTIES
         #region SOUND
-        // SOUNDS EFFECTS
-        private SoundEffect hitSound;
-        private SoundEffect afterHitSound;
-        private SoundEffect shootSound;
-        private SoundEffect bgm;
-        private SoundEffect shootInCD;
+        private SoundEffect hitSound; //When rocket hits an enemy
+        private SoundEffect enemyDeadAfterHitSound; //Self-explanatory
+        private SoundEffect shootSound; 
+        private SoundEffect bgm; //Main background music (same for all levels)
+        private SoundEffect shootInCD; //Sound played if player tries to shoot while on CD
         #endregion
 
+        //PLAYER PROPERTIES
         #region PLAYER
-        // PLAYER PROPERTIES
-        private float playerSpeed = 150.0f;
-        private Vector2 playerPosition;
+        private float playerSpeed = 150.0f; //Ship's moving value
+        private Vector2 playerPosition; //Handles the player's position during the whole game
 
-        //shooting:
-        private float shootCooldown;
+        private float shootCooldown; //Cooldown value between each shots
         #endregion
 
-        // Constructeur du jeu
+        #endregion
+
+        #region MAIN METHODS (6)
+
+        //GAME CONSTRUCTOR METHOD
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
-            graphics.PreferredBackBufferHeight = screen_height; // 600px height
-            graphics.PreferredBackBufferWidth = screen_width; // 500px width
+            graphics.PreferredBackBufferHeight = screen_height; //600px HEIGHT SCREEN
+            graphics.PreferredBackBufferWidth = screen_width; //500px WIDTH SCREEN
 
+            //Indicates the main content folder's name.
             Content.RootDirectory = "Content";
+
+            //Initialize shooting and environment lists for display.
             projectilesOnScreen = new List<Projectile>();
             starsOnScreen = new List<Star>();
+            //enemisOnScreen = new List<Enemy>();
         }
 
-        // Initialize game logic
+        //INITIALIZE METHOD
         protected override void Initialize()
         {
-            #region PLAYER
             //PLAYER INITIALIZATION
+            #region PLAYER
+
+            //Player position is at the middle of the screen by default
             playerPosition = new Vector2(screen_width / 2, screen_height / 2);
-            shootCooldown = 1.0f;
+            shootCooldown = 1.0f; //Default shooting cooldown
+
             #endregion
 
-            #region ENVIRONMENT
             //ENVIRONMENT INITIALIZATION
+            #region ENVIRONMENT
             bgmPlayable = true;
 
-            star1 = Content.Load<Texture2D>("star1");
+ 
+            star1 = Content.Load<Texture2D>("star1"); //Stars sprite loaded
             randomStarPos = new Random();
-  
+            //FOR LOOP - Creating all the screen's stars with random positions and speed
             for(int i = 0; i < 20; i++)
             {
                 this._randomPosX = randomStarPos.Next(1, 500);
@@ -109,40 +123,41 @@ namespace GetGoodMonogame
             }
             #endregion
 
+            //GAMEPLAY INITIALIZATION
             #region GAMEPLAY
-            //PROJECTILES INITIALIZATION
             projectileSprite = Content.Load<Texture2D>("rocket");
             #endregion
 
             base.Initialize();
         }
-
-        // Load all the needed content
+        
+        //LOADING CONTENT METHOD
         protected override void LoadContent()
         {
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            //player content:
+            //PLAYER CONTENT LOAD:
             playerSprite = Content.Load<Texture2D>("ship");
-            rocketIcon = Content.Load<Texture2D>("rocket");
 
-            //sound content:
+            //SOUND CONTENT LOAD:
             bgm = Content.Load<SoundEffect>("BGM");
-            afterHitSound = Content.Load<SoundEffect>("hitSound");
+            enemyDeadAfterHitSound = Content.Load<SoundEffect>("hitSound");
             shootSound = Content.Load<SoundEffect>("shootSound");
             shootInCD = Content.Load<SoundEffect>("shootInCD");
 
-            //environment content:
+            //ENVIRONMENT CONTENT LOAD:
             gameFont = Content.Load<SpriteFont>("gameFont");
-            
+            rocketIcon = Content.Load<Texture2D>("rocket");
         }
+
+        //UNLOADING CONTENT METHOD
         protected override void UnloadContent(){}
 
-        // Game's main loop
+        //GAME'S MAIN LOOP - UPDATE
         protected override void Update(GameTime gameTime)
         {
-            #region BGM
-            // Playing BGM
+            #region SOUNDS & MUSICS
+            //PLAYING BGM
             if (bgmPlayable == true)
             {
                 bgmPlayable = false; //PlaysOnlyOnce
@@ -150,23 +165,7 @@ namespace GetGoodMonogame
             }
             #endregion
 
-            #region MAIN LOGIC
-            // Exits the game when pressing Esc
-            if (Keyboard.GetState().IsKeyDown(Keys.Escape))
-            { Exit(); }
-
-            // Shooting + cooldown system
-            shootCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            //blocks the timing at 0sec:
-            if (shootCooldown <= 0)
-            {
-                shootCooldown = 0;
-            }
-
-            #endregion
-
-            #region Déplacements
+            #region DIRECTIONAL MOVING
             if (Keyboard.GetState().IsKeyDown(Keys.Z))
             { playerPosition.Y -= playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
             if (Keyboard.GetState().IsKeyDown(Keys.D))
@@ -177,14 +176,25 @@ namespace GetGoodMonogame
             { playerPosition.X -= playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
             #endregion
 
+            #region COOLDOWN
+            shootCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            //blocks the timing at 0sec:
+            if (shootCooldown <= 0)
+            {
+                shootCooldown = 0;
+            }
+            #endregion
+
+            #region SHOOTING
             if (Keyboard.GetState().IsKeyDown(Keys.Space) && shootCooldown <= 0)
             {
+                //Creates a new rocket from a texture and a starting position.
                 ShootBullet(projectileSprite, new Vector2(playerPosition.X - 15.5f, 
                     playerPosition.Y - 20));
 
+                //If-projectile-is-shot checker
                 foreach(Projectile p in projectilesOnScreen)
                 {
-                    //p.Update(gameTime);
                     p._isOnScreen = true;
                 }
 
@@ -192,6 +202,7 @@ namespace GetGoodMonogame
                 shootCooldown = 1.0f;
             }
 
+            //Update() method call for any Rocket that is on the screen, so that they move.
             foreach (Projectile p in projectilesOnScreen)
             {
                 if (p._isOnScreen)
@@ -199,25 +210,40 @@ namespace GetGoodMonogame
                     p.Update(gameTime);
                 }
             }
+            #endregion
 
+            #region ENVIRONMENT
+            //Makes the stars crolling with random speeds
             foreach (Star s in starsOnScreen)
             {
                 _randomStarSpeedY = randomStarPos.NextDouble() * (1f - 0.15f) + 0.15f;
                 s.Update(gameTime, _randomStarSpeedY);
             }
+            #endregion
+
+            #region SYSTEM
+            //Exits the game when pressing Esc
+            if (Keyboard.GetState().IsKeyDown(Keys.Escape))
+            { Exit(); }
+            #endregion
 
             base.Update(gameTime);
         }
 
-        // Draw to screen EACH frame (60 fps by default)
+        //GAME'S MAIN LOOP - DRAW
         protected override void Draw(GameTime gameTime)
         {
             graphics.GraphicsDevice.Clear(Color.Black);
 
+            //Anything drawn on the screen between .Begin() and .End()
             spriteBatch.Begin();
 
+            #region SCREEN
             spriteBatch.DrawString(gameFont, "Cooldown: " + shootCooldown.ToString("F0") + " sec", new Vector2(rocketIconPos.X + 28, 578), Color.White);
             spriteBatch.Draw(rocketIcon, rocketIconPos, Color.White);
+            #endregion
+
+            #region PLAYER
             spriteBatch.Draw(playerSprite, playerPosition, null, Color.White, 0f, new Vector2(playerSprite.Width / 2, playerSprite.Height / 2),
                 Vector2.One, SpriteEffects.None, 0.1f);
 
@@ -228,27 +254,36 @@ namespace GetGoodMonogame
                     p.Draw(gameTime, spriteBatch);
                 }
             }
+            #endregion
 
+            #region ENVIRONMENT
             foreach(Star s in starsOnScreen)
             {
                 s.Draw(gameTime, spriteBatch);
             }
+            #endregion
 
             spriteBatch.End();
 
             base.Draw(gameTime);
         }
+        #endregion
 
+        #region OTHER METHODS
+        
+        //WHEN SHOOTING A BULLET (Called in Update() when pressing the Shooting Button)
         public void ShootBullet(Texture2D texture, Vector2 startPos)
         {
             Projectile projectile = new Projectile(texture, startPos);
             projectilesOnScreen.Add(projectile);
         }
 
+        //SPAWNING STARS IN THE ENVIRONMENT (Called in Initialize() method, because nothing interacts with that)
         public void RandomStars(Texture2D texture, int rdmPosX, int rdmPosY, double rdmYSpeed)
         {
             Star star = new Star(texture, rdmPosX, rdmPosY, rdmYSpeed);
             starsOnScreen.Add(star);
         }
+        #endregion
     }
 }

@@ -17,7 +17,6 @@ namespace GetGoodMonogame
         public Vector2 _position;
         public double _randomSpeedY;
 
-
         //Also initializes background white stars
         public Star(Texture2D texture, int rdmPosX, int rdmPosY, double rdmYSpeed)
         {
