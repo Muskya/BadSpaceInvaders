@@ -23,11 +23,16 @@ namespace GetGoodMonogame
         //window's dimensions:
         private int screen_width = 500; 
         private int screen_height = 600;
+
+        private Texture2D rocketIcon;
+        //The rocket icon position at the bottom of the screen
+        private Vector2 rocketIconPos = new Vector2(-5, 570);
+
+        private int score;
         #endregion
 
         //GAME PROPERTIES
         #region GAME
-        private bool bgmPlayable = false;
         private SpriteFont gameFont;
         #endregion
 
@@ -35,40 +40,42 @@ namespace GetGoodMonogame
         #region CLASSES
         List<Projectile> projectilesOnScreen; //Rockets shot on the screen
         List<Star> starsOnScreen; //Infinite-scrolling stars on the screen
-        //List<Enemy> enemiesOnScreen; //Enemies on the screen
+        List<Enemy> enemiesOnScreen; //Enemies on the screen
 
         //Random variable to set random X and Y star positions
         Random randomStarPos;
         #endregion
 
-        //TEXTURES PROPERTIES
+        //ENVIRONMENT PROPERTIES
         #region TEXTURE
         private Texture2D projectileSprite;
         private Texture2D playerSprite;
+        private Texture2D enemySprite;
 
         //Environment stars properties
         private Texture2D star1;
         public int _randomPosX;
         public int _randomPosY;
         public double _randomStarSpeedY;
-
-        private Texture2D rocketIcon;
-        //The rocket icon position at the bottom of the screen
-        private Vector2 rocketIconPos = new Vector2(-5, 570);
         #endregion
 
         //SOUNDS PROPERTIES
         #region SOUND
         private SoundEffect hitSound; //When rocket hits an enemy
         private SoundEffect enemyDeadAfterHitSound; //Self-explanatory
+        private SoundEffect enemyDeathSound;
         private SoundEffect shootSound; 
+
         private SoundEffect bgm; //Main background music (same for all levels)
+        private bool bgmPlayable = false;
+        private SoundEffectInstance bgmInstance;
+
         private SoundEffect shootInCD; //Sound played if player tries to shoot while on CD
         #endregion
 
         //PLAYER PROPERTIES
         #region PLAYER
-        private float playerSpeed = 150.0f; //Ship's moving value
+        private float playerSpeed = 250.0f; //Ship's moving value
         private Vector2 playerPosition; //Handles the player's position during the whole game
 
         private float shootCooldown; //Cooldown value between each shots
@@ -91,12 +98,23 @@ namespace GetGoodMonogame
             //Initialize shooting and environment lists for display.
             projectilesOnScreen = new List<Projectile>();
             starsOnScreen = new List<Star>();
-            //enemisOnScreen = new List<Enemy>();
+            enemiesOnScreen = new List<Enemy>();
         }
+
+        
 
         //INITIALIZE METHOD
         protected override void Initialize()
         {
+            //SOUND INITIALIZATION
+            #region SOUND
+            bgm = Content.Load<SoundEffect>("BGM");
+            bgmPlayable = true;
+            bgmInstance = bgm.CreateInstance();
+            bgmInstance.IsLooped = true;
+            //bgmInstance.Play();
+            #endregion
+
             //PLAYER INITIALIZATION
             #region PLAYER
 
@@ -108,29 +126,38 @@ namespace GetGoodMonogame
 
             //ENVIRONMENT INITIALIZATION
             #region ENVIRONMENT
-            bgmPlayable = true;
-
- 
             star1 = Content.Load<Texture2D>("star1"); //Stars sprite loaded
             randomStarPos = new Random();
-            //FOR LOOP - Creating all the screen's stars with random positions and speed
+
+            //FOR LOOP STARS - Creating all the screen's stars with random positions and speed
             for(int i = 0; i < 20; i++)
             {
                 this._randomPosX = randomStarPos.Next(1, 500);
                 this._randomPosY = randomStarPos.Next(1, 600);
-                this._randomStarSpeedY = randomStarPos.NextDouble() * (1f - 0.15f) + 0.15f;
-                RandomStars(star1, this._randomPosX, this._randomPosY, this._randomStarSpeedY);
+                //RandomStars() method call that creates a new star and adds it to the list
+                RandomStars(star1, this._randomPosX, this._randomPosY, this._randomStarSpeedY); 
+            }
+
+            //Loads the enemy sprite before creating some of them
+            enemySprite = Content.Load<Texture2D>("enemy");
+            for(int i = 0; i < 12; i++)
+            {
+                SpawnMonster(enemySprite, new Vector2(30 + (i * 37), 20));
             }
             #endregion
 
             //GAMEPLAY INITIALIZATION
             #region GAMEPLAY
             projectileSprite = Content.Load<Texture2D>("rocket");
+            score = 0; //Initializes the score to 0 to allow calculations
+
+            
+            
             #endregion
 
             base.Initialize();
         }
-        
+
         //LOADING CONTENT METHOD
         protected override void LoadContent()
         {
@@ -140,8 +167,9 @@ namespace GetGoodMonogame
             playerSprite = Content.Load<Texture2D>("ship");
 
             //SOUND CONTENT LOAD:
-            bgm = Content.Load<SoundEffect>("BGM");
             enemyDeadAfterHitSound = Content.Load<SoundEffect>("hitSound");
+            enemyDeathSound = Content.Load<SoundEffect>("enemyDeath");
+
             shootSound = Content.Load<SoundEffect>("shootSound");
             shootInCD = Content.Load<SoundEffect>("shootInCD");
 
@@ -157,12 +185,7 @@ namespace GetGoodMonogame
         protected override void Update(GameTime gameTime)
         {
             #region SOUNDS & MUSICS
-            //PLAYING BGM
-            if (bgmPlayable == true)
-            {
-                bgmPlayable = false; //PlaysOnlyOnce
-                bgm.Play();
-            }
+            
             #endregion
 
             #region DIRECTIONAL MOVING
@@ -203,20 +226,36 @@ namespace GetGoodMonogame
             }
 
             //Update() method call for any Rocket that is on the screen, so that they move.
-            foreach (Projectile p in projectilesOnScreen)
-            {
-                if (p._isOnScreen)
-                {
+            foreach (Projectile p in projectilesOnScreen) {
+
+                if (p._isOnScreen) {
                     p.Update(gameTime);
                 }
+                    
+                foreach (Enemy e in Enemy.enemiesOnScreen) {
+                    if (p._collisionBox.Intersects(e._collisionBox)) {
+                        score += 10;
+                        enemyDeathSound.Play(0.15f, 0, 0);
+                        e._isDead = true;
+                    }
+                }
             }
+
+            //Update (movement for each enemy on screen)
+            foreach (Enemy e in Enemy.enemiesOnScreen) {
+                if (e._isDead) { }
+                else {
+                    e.Update(gameTime);
+                }     
+            }
+
             #endregion
 
             #region ENVIRONMENT
             //Makes the stars crolling with random speeds
             foreach (Star s in starsOnScreen)
             {
-                _randomStarSpeedY = randomStarPos.NextDouble() * (1f - 0.15f) + 0.15f;
+                _randomStarSpeedY = randomStarPos.NextDouble() * (1f - 0.00001f) + 0.00001f;
                 s.Update(gameTime, _randomStarSpeedY);
             }
             #endregion
@@ -237,10 +276,11 @@ namespace GetGoodMonogame
 
             //Anything drawn on the screen between .Begin() and .End()
             spriteBatch.Begin();
-
+            
             #region SCREEN
-            spriteBatch.DrawString(gameFont, "Cooldown: " + shootCooldown.ToString("F0") + " sec", new Vector2(rocketIconPos.X + 28, 578), Color.White);
             spriteBatch.Draw(rocketIcon, rocketIconPos, Color.White);
+            spriteBatch.DrawString(gameFont, "Cooldown: " + shootCooldown.ToString("F0") + " sec", new Vector2(rocketIconPos.X + 28, 578), Color.White);
+            spriteBatch.DrawString(gameFont, "Score: " + score.ToString(), new Vector2(0, 0), Color.White);
             #endregion
 
             #region PLAYER
@@ -254,14 +294,27 @@ namespace GetGoodMonogame
                     p.Draw(gameTime, spriteBatch);
                 }
             }
+
             #endregion
 
             #region ENVIRONMENT
-            foreach(Star s in starsOnScreen)
+            foreach (Star s in starsOnScreen)
             {
                 s.Draw(gameTime, spriteBatch);
             }
+
+            foreach (Enemy e in Enemy.enemiesOnScreen)
+            {
+                if (e._isDead) {
+
+                } else {
+                    e.Draw(gameTime, spriteBatch);
+                }
+                 
+            }
             #endregion
+
+            
 
             spriteBatch.End();
 
@@ -284,6 +337,14 @@ namespace GetGoodMonogame
             Star star = new Star(texture, rdmPosX, rdmPosY, rdmYSpeed);
             starsOnScreen.Add(star);
         }
+
+        //SPAWNING MONSTERS IN THE ENVIRONMENT
+        public void SpawnMonster(Texture2D texture, Vector2 pos)
+        {
+            Enemy enemy = new Enemy(texture, pos);
+            Enemy.enemiesOnScreen.Add(enemy);
+        }
+
         #endregion
     }
 }

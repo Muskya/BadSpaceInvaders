@@ -45,6 +45,7 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Enemy.cs" />
     <Compile Include="Star.cs" />
     <Compile Include="Game1.cs" />
     <Compile Include="Program.cs" />
