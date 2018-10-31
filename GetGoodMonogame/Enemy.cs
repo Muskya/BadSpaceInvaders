@@ -35,5 +35,13 @@ namespace GetGoodMonogame
         public void Update(GameTime gameTime)
         {
             this._position.Y += 0.2f;
+            //La collisionBox suit le sprite de l'ennemi. Placé à la fin après quelconque modification de position
+            this._collisionBox = new Rectangle((int)this._position.X, (int)this._position.Y, (int)this._texture.Width, (int)this._texture.Height);
+        }
+
+        public void Draw(GameTime gameTime, SpriteBatch spriteBatch)
+        {
+            spriteBatch.Draw(this._texture, this._position, Color.White);
+        }
     }
 }
