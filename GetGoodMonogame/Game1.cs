@@ -49,8 +49,12 @@ namespace GetGoodMonogame
         //ENVIRONMENT PROPERTIES
         #region TEXTURE
         private Texture2D projectileSprite;
-        private Texture2D playerSprite;
         private Texture2D enemySprite;
+        private Rectangle enemyCollibox;
+
+        //Debug-purpose textures. (Green collision boxes)
+        private Texture2D rectEnemy;
+        private Texture2D rectProjectile;
 
         //Environment stars properties
         private Texture2D star1;
@@ -64,6 +68,7 @@ namespace GetGoodMonogame
         private SoundEffect hitSound; //When rocket hits an enemy
         private SoundEffect enemyDeadAfterHitSound; //Self-explanatory
         private SoundEffect enemyDeathSound;
+        private SoundEffectInstance enemyDeathSoundInstance;
         private SoundEffect shootSound; 
 
         private SoundEffect bgm; //Main background music (same for all levels)
@@ -77,7 +82,8 @@ namespace GetGoodMonogame
         #region PLAYER
         private float playerSpeed = 250.0f; //Ship's moving value
         private Vector2 playerPosition; //Handles the player's position during the whole game
-
+        private Texture2D playerSprite;
+        private Rectangle playerCollibox;
         private float shootCooldown; //Cooldown value between each shots
         #endregion
 
@@ -101,9 +107,9 @@ namespace GetGoodMonogame
             enemiesOnScreen = new List<Enemy>();
         }
 
-        
 
-        //INITIALIZE METHOD
+
+        // ######## INITIALIZE METHOD ######## //
         protected override void Initialize()
         {
             //SOUND INITIALIZATION
@@ -111,8 +117,13 @@ namespace GetGoodMonogame
             bgm = Content.Load<SoundEffect>("BGM");
             bgmPlayable = true;
             bgmInstance = bgm.CreateInstance();
+
+            //Played() and IsLooped here because nothing interacts with the bgm to enable it
             bgmInstance.IsLooped = true;
-            //bgmInstance.Play();
+            bgmInstance.Play();
+
+            enemyDeathSound = Content.Load<SoundEffect>("enemyDeath");
+            enemyDeathSoundInstance = enemyDeathSound.CreateInstance();
             #endregion
 
             //PLAYER INITIALIZATION
@@ -120,8 +131,9 @@ namespace GetGoodMonogame
 
             //Player position is at the middle of the screen by default
             playerPosition = new Vector2(screen_width / 2, screen_height / 2);
-            shootCooldown = 1.0f; //Default shooting cooldown
-
+            shootCooldown = 1.5f; //Default shooting cooldown
+            playerSprite = Content.Load<Texture2D>("ship");
+            playerCollibox = new Rectangle((int)playerPosition.X, (int)playerPosition.Y, (int)playerSprite.Width, (int)playerSprite.Height);
             #endregion
 
             //ENVIRONMENT INITIALIZATION
@@ -130,19 +142,20 @@ namespace GetGoodMonogame
             randomStarPos = new Random();
 
             //FOR LOOP STARS - Creating all the screen's stars with random positions and speed
-            for(int i = 0; i < 20; i++)
+            for (int i = 0; i < 20; i++)
             {
                 this._randomPosX = randomStarPos.Next(1, 500);
                 this._randomPosY = randomStarPos.Next(1, 600);
                 //RandomStars() method call that creates a new star and adds it to the list
-                RandomStars(star1, this._randomPosX, this._randomPosY, this._randomStarSpeedY); 
+                RandomStars(star1, this._randomPosX, this._randomPosY, this._randomStarSpeedY);
             }
 
             //Loads the enemy sprite before creating some of them
             enemySprite = Content.Load<Texture2D>("enemy");
-            for(int i = 0; i < 12; i++)
+            for (int i = 0; i < 12; i++)
             {
-                SpawnMonster(enemySprite, new Vector2(30 + (i * 37), 20));
+                enemyCollibox = new Rectangle(0, 0, (int)enemySprite.Width, (int)enemySprite.Height);
+                SpawnMonster(enemySprite, new Vector2(30 + (i * 37), 20), enemyCollibox);
             }
             #endregion
 
@@ -151,51 +164,60 @@ namespace GetGoodMonogame
             projectileSprite = Content.Load<Texture2D>("rocket");
             score = 0; //Initializes the score to 0 to allow calculations
 
-            
-            
+            #endregion
+
+            #region DEBUGGING
+            //Debug purposes (Displays green rectangle around enemy and projectile sprites to show their collision box.)
+            rectProjectile = new Texture2D(graphics.GraphicsDevice, projectileSprite.Width - 24, projectileSprite.Height);
+            rectEnemy = new Texture2D(graphics.GraphicsDevice, enemySprite.Width, enemySprite.Height);
+
+            Color[] data = new Color[rectEnemy.Height * rectEnemy.Width];
+            Color[] data1 = new Color[rectProjectile.Height * rectProjectile.Width];
+
+            for (int i = 0; i < data.Length; ++i)
+                data[i] = Color.Green;
+            for (int i = 0; i < data1.Length; ++i)
+                data1[i] = Color.Green;
+
+            rectEnemy.SetData(data);
+            rectProjectile.SetData(data1);
             #endregion
 
             base.Initialize();
         }
 
-        //LOADING CONTENT METHOD
+        // ######## LOAD CONTENT METHOD ######## //
         protected override void LoadContent()
         {
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
             //PLAYER CONTENT LOAD:
-            playerSprite = Content.Load<Texture2D>("ship");
 
             //SOUND CONTENT LOAD:
-            enemyDeadAfterHitSound = Content.Load<SoundEffect>("hitSound");
-            enemyDeathSound = Content.Load<SoundEffect>("enemyDeath");
-
             shootSound = Content.Load<SoundEffect>("shootSound");
-            shootInCD = Content.Load<SoundEffect>("shootInCD");
 
             //ENVIRONMENT CONTENT LOAD:
             gameFont = Content.Load<SpriteFont>("gameFont");
             rocketIcon = Content.Load<Texture2D>("rocket");
         }
-
-        //UNLOADING CONTENT METHOD
+        // ######## UNLOAD CONTENT METHOD ######## //
         protected override void UnloadContent(){}
 
-        //GAME'S MAIN LOOP - UPDATE
+        // ######## UPDATE METHOD ######## //
         protected override void Update(GameTime gameTime)
         {
             #region SOUNDS & MUSICS
-            
+
             #endregion
 
             #region DIRECTIONAL MOVING
-            if (Keyboard.GetState().IsKeyDown(Keys.Z))
+            if (Keyboard.GetState().IsKeyDown(Keys.Z) || Keyboard.GetState().IsKeyDown(Keys.Up))
             { playerPosition.Y -= playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
-            if (Keyboard.GetState().IsKeyDown(Keys.D))
+            if (Keyboard.GetState().IsKeyDown(Keys.D) || Keyboard.GetState().IsKeyDown(Keys.Right))
             { playerPosition.X += playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
-            if (Keyboard.GetState().IsKeyDown(Keys.S))
+            if (Keyboard.GetState().IsKeyDown(Keys.S) || Keyboard.GetState().IsKeyDown(Keys.Down))
             { playerPosition.Y += playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
-            if (Keyboard.GetState().IsKeyDown(Keys.Q))
+            if (Keyboard.GetState().IsKeyDown(Keys.Q) || Keyboard.GetState().IsKeyDown(Keys.Left))
             { playerPosition.X -= playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
             #endregion
 
@@ -209,18 +231,20 @@ namespace GetGoodMonogame
             #endregion
 
             #region SHOOTING
+            //Pressing the spacebar
             if (Keyboard.GetState().IsKeyDown(Keys.Space) && shootCooldown <= 0)
             {
                 //Creates a new rocket from a texture and a starting position.
                 ShootBullet(projectileSprite, new Vector2(playerPosition.X - 15.5f, 
                     playerPosition.Y - 20));
 
-                //If-projectile-is-shot checker
+                //Sets every Projectile to "isOnScreen" after shooting (spacebar)
                 foreach(Projectile p in projectilesOnScreen)
                 {
                     p._isOnScreen = true;
                 }
 
+                //Shooting sound
                 shootSound.Play();
                 shootCooldown = 1.0f;
             }
@@ -228,22 +252,29 @@ namespace GetGoodMonogame
             //Update() method call for any Rocket that is on the screen, so that they move.
             foreach (Projectile p in projectilesOnScreen) {
 
+                //Moves the rocket as long as it's on the screen (after shooting and before hitting an enemy)
                 if (p._isOnScreen) {
                     p.Update(gameTime);
                 }
                     
+                //ForEach used to manage collisions between Enemies and Projectiles
                 foreach (Enemy e in Enemy.enemiesOnScreen) {
                     if (p._collisionBox.Intersects(e._collisionBox)) {
                         score += 10;
-                        enemyDeathSound.Play(0.15f, 0, 0);
+                        enemyDeathSoundInstance.Play();
+                        enemyDeathSoundInstance.Pause();
+                        p._hasHitEnemy = true;
                         e._isDead = true;
                     }
                 }
             }
 
-            //Update (movement for each enemy on screen)
+            //Only updates Enemies movement if the Enemy isn't dead
             foreach (Enemy e in Enemy.enemiesOnScreen) {
-                if (e._isDead) { }
+                if (e._isDead) {
+                    //Basically sets the enemy collision box to "null". Can't do it explicitely because Rectangle is a struct.
+                    e._collisionBox = Rectangle.Empty;
+                }
                 else {
                     e.Update(gameTime);
                 }     
@@ -269,17 +300,42 @@ namespace GetGoodMonogame
             base.Update(gameTime);
         }
 
-        //GAME'S MAIN LOOP - DRAW
+        // ######## DRAW METHOD ######### //
         protected override void Draw(GameTime gameTime)
         {
             graphics.GraphicsDevice.Clear(Color.Black);
 
             //Anything drawn on the screen between .Begin() and .End()
             spriteBatch.Begin();
-            
+
+            #region ENVIRONMENT
+            //Draws each star of the collection initially
+            foreach (Star s in starsOnScreen)
+            {
+                s.Draw(gameTime, spriteBatch);
+            }
+
+            //Draws each Enemy of the collection only if he's not dead
+            foreach (Enemy e in Enemy.enemiesOnScreen)
+            {
+                if (e._isDead) { }
+                else {
+                    //Debug draw. Draws the enemy collision box in Green.
+                    //spriteBatch.Draw(rectEnemy, e._position, Color.White);
+                    e.Draw(gameTime, spriteBatch);
+                }
+            }
+            #endregion
+
             #region SCREEN
             spriteBatch.Draw(rocketIcon, rocketIconPos, Color.White);
-            spriteBatch.DrawString(gameFont, "Cooldown: " + shootCooldown.ToString("F0") + " sec", new Vector2(rocketIconPos.X + 28, 578), Color.White);
+
+            //Draws the cooldown string in green if player canShoot
+            if (shootCooldown == 0.0f)
+                spriteBatch.DrawString(gameFont, "Cooldown: " + shootCooldown.ToString("F2") + " sec", new Vector2(rocketIconPos.X + 28, 578), Color.Green);
+            else
+                spriteBatch.DrawString(gameFont, "Cooldown: " + shootCooldown.ToString("F2") + " sec", new Vector2(rocketIconPos.X + 28, 578), Color.White);
+            
             spriteBatch.DrawString(gameFont, "Score: " + score.ToString(), new Vector2(0, 0), Color.White);
             #endregion
 
@@ -287,34 +343,20 @@ namespace GetGoodMonogame
             spriteBatch.Draw(playerSprite, playerPosition, null, Color.White, 0f, new Vector2(playerSprite.Width / 2, playerSprite.Height / 2),
                 Vector2.One, SpriteEffects.None, 0.1f);
 
+            //Draws the projectile if is shot (onScreen) and it hasn't hit an enemy yet (!hasHitEnemy)
             foreach(Projectile p in projectilesOnScreen)
             {
-                if (p._isOnScreen)
+                if (p._isOnScreen && !p._hasHitEnemy)
                 {
+                    //Debug draw. Draws the projectile collision box in green.
+                    //spriteBatch.Draw(rectProjectile, new Vector2(p._position.X + 12, p._position.Y), Color.White);
                     p.Draw(gameTime, spriteBatch);
                 }
             }
-
-            #endregion
-
-            #region ENVIRONMENT
-            foreach (Star s in starsOnScreen)
-            {
-                s.Draw(gameTime, spriteBatch);
-            }
-
-            foreach (Enemy e in Enemy.enemiesOnScreen)
-            {
-                if (e._isDead) {
-
-                } else {
-                    e.Draw(gameTime, spriteBatch);
-                }
-                 
-            }
-            #endregion
-
             
+            #endregion
+
+           
 
             spriteBatch.End();
 
@@ -339,12 +381,11 @@ namespace GetGoodMonogame
         }
 
         //SPAWNING MONSTERS IN THE ENVIRONMENT
-        public void SpawnMonster(Texture2D texture, Vector2 pos)
+        public void SpawnMonster(Texture2D texture, Vector2 pos, Rectangle colliBox)
         {
-            Enemy enemy = new Enemy(texture, pos);
+            Enemy enemy = new Enemy(texture, pos, colliBox);
             Enemy.enemiesOnScreen.Add(enemy);
         }
-
         #endregion
     }
 }

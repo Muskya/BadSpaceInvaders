@@ -21,20 +21,28 @@ namespace GetGoodMonogame
 
         public Rectangle _collisionBox;
 
+        public Rectangle _debugRectangle;
+        public Texture2D _debugTexture;
+
         public static List<Enemy> enemiesOnScreen = new List<Enemy>();
 
-        public Enemy(Texture2D texture, Vector2 pos)
+        public Enemy(Texture2D texture, Vector2 pos, Rectangle colliBox)
         {
             this._texture = texture;
             this._position = pos;
             this._startPos = pos;
-            this._collisionBox = new Rectangle((int)this._position.X, (int)this._position.Y, (int)this._texture.Width, (int)this._texture.Height);
-            enemiesOnScreen.Add(this);
+
+            //this._collisionBox = new Rectangle((int)this._position.X, (int)this._position.Y, (int)this._texture.Width, (int)this._texture.Height);
+            this._collisionBox = colliBox;
+            this._collisionBox.X = (int)this._position.X;
+            this._collisionBox.Y = (int)this._position.Y;
         }
 
         public void Update(GameTime gameTime)
         {
-            this._position.Y += 0.2f;
+            //Mouvement vertical vers le bas des ennemis.
+            this._position.Y += 0.5f;
+
             //La collisionBox suit le sprite de l'ennemi. Placé à la fin après quelconque modification de position
             this._collisionBox = new Rectangle((int)this._position.X, (int)this._position.Y, (int)this._texture.Width, (int)this._texture.Height);
         }
