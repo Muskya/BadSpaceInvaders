@@ -35,7 +35,6 @@ namespace GetGoodMonogame
             this._texture = texture;
             this._position = startPos;
             this._collisionBox = new Rectangle((int)this._position.X + 12, (int)this._position.Y, (int)this._texture.Width - 24, (int)this._texture.Height);
-            projectilesOnScreen.Add(this);
         }
 
         public void Update(GameTime gameTime)

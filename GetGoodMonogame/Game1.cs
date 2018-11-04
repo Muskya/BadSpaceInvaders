@@ -19,21 +19,38 @@ namespace GetGoodMonogame
         #region SCREEN
         GraphicsDeviceManager graphics; // L'écran en gros 
         SpriteBatch spriteBatch; // Layer d'affichage 
-        
+
+        private Texture2D mainMenuBackground;
+
         //window's dimensions:
         private int screen_width = 500; 
         private int screen_height = 600;
+
+        Button quitButton, playButton;
+        private Texture2D noneQuitButtonTexture, hoverQuitButtonTexture, nonePlayButtonTexture, hoverPlayButtonTexture;
+        private Rectangle quitRectangle, playRectangle;
 
         private Texture2D rocketIcon;
         //The rocket icon position at the bottom of the screen
         private Vector2 rocketIconPos = new Vector2(-5, 570);
 
         private int score;
+
+
         #endregion
 
         //GAME PROPERTIES
         #region GAME
         private SpriteFont gameFont;
+
+        public enum GameState {
+            MainMenu = 0,
+            Playing = 1,
+            Quit = 2
+        }
+       
+        public static GameState _gameState;
+        private MouseState _mouseState;
         #endregion
 
         //CLASSES INSTANCIATIONS AND PROPERTIES
@@ -55,6 +72,7 @@ namespace GetGoodMonogame
         //Debug-purpose textures. (Green collision boxes)
         private Texture2D rectEnemy;
         private Texture2D rectProjectile;
+        private Texture2D rectPlayer;
 
         //Environment stars properties
         private Texture2D star1;
@@ -107,8 +125,6 @@ namespace GetGoodMonogame
             enemiesOnScreen = new List<Enemy>();
         }
 
-
-
         // ######## INITIALIZE METHOD ######## //
         protected override void Initialize()
         {
@@ -124,6 +140,31 @@ namespace GetGoodMonogame
 
             enemyDeathSound = Content.Load<SoundEffect>("enemyDeath");
             enemyDeathSoundInstance = enemyDeathSound.CreateInstance();
+            #endregion
+
+            //GAME INITIALIZATION
+            #region GAME
+            mainMenuBackground = Content.Load<Texture2D>("Mainmenu");
+            _gameState = GameState.MainMenu;
+            _mouseState = Mouse.GetState();
+
+            //Loads the button textures for Nonestate and HoveredState
+            noneQuitButtonTexture = Content.Load<Texture2D>("quitButtonNone");
+            hoverQuitButtonTexture = Content.Load<Texture2D>("quitButtonHovered");
+
+            nonePlayButtonTexture = Content.Load<Texture2D>("playButtonNone");
+            hoverPlayButtonTexture = Content.Load<Texture2D>("playButtonHovered");
+
+            //Creates the buttons
+            quitButton = new Button(noneQuitButtonTexture, hoverQuitButtonTexture, new Vector2(275, 400));
+            playButton = new Button(nonePlayButtonTexture, hoverPlayButtonTexture, new Vector2(75, 400));
+
+            //Sets the button rectangles
+            quitRectangle = new Rectangle((int)quitButton._position.X, (int)quitButton._position.Y, (int)noneQuitButtonTexture.Width, (int)noneQuitButtonTexture.Height);
+            playRectangle = new Rectangle((int)playButton._position.X, (int)playButton._position.Y, (int)nonePlayButtonTexture.Width, (int)nonePlayButtonTexture.Height);
+            quitButton.SetRectangle(quitRectangle);
+            playButton.SetRectangle(playRectangle);
+
             #endregion
 
             //PLAYER INITIALIZATION
@@ -170,17 +211,24 @@ namespace GetGoodMonogame
             //Debug purposes (Displays green rectangle around enemy and projectile sprites to show their collision box.)
             rectProjectile = new Texture2D(graphics.GraphicsDevice, projectileSprite.Width - 24, projectileSprite.Height);
             rectEnemy = new Texture2D(graphics.GraphicsDevice, enemySprite.Width, enemySprite.Height);
+            rectPlayer = new Texture2D(graphics.GraphicsDevice, playerSprite.Width, playerSprite.Height);
 
+            //Arrays de pixels vert pour créer les rectangles autour des sprites
             Color[] data = new Color[rectEnemy.Height * rectEnemy.Width];
             Color[] data1 = new Color[rectProjectile.Height * rectProjectile.Width];
+            Color[] data2 = new Color[rectPlayer.Height * rectPlayer.Width];
 
+            //Créer des rectangles autour du sprite en vert
             for (int i = 0; i < data.Length; ++i)
                 data[i] = Color.Green;
             for (int i = 0; i < data1.Length; ++i)
                 data1[i] = Color.Green;
+            for (int i = 0; i < data2.Length; ++i)
+                data2[i] = Color.Green;
 
             rectEnemy.SetData(data);
             rectProjectile.SetData(data1);
+            rectPlayer.SetData(data2);
             #endregion
 
             base.Initialize();
@@ -206,93 +254,127 @@ namespace GetGoodMonogame
         // ######## UPDATE METHOD ######## //
         protected override void Update(GameTime gameTime)
         {
-            #region SOUNDS & MUSICS
 
-            #endregion
-
-            #region DIRECTIONAL MOVING
-            if (Keyboard.GetState().IsKeyDown(Keys.Z) || Keyboard.GetState().IsKeyDown(Keys.Up))
-            { playerPosition.Y -= playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
-            if (Keyboard.GetState().IsKeyDown(Keys.D) || Keyboard.GetState().IsKeyDown(Keys.Right))
-            { playerPosition.X += playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
-            if (Keyboard.GetState().IsKeyDown(Keys.S) || Keyboard.GetState().IsKeyDown(Keys.Down))
-            { playerPosition.Y += playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
-            if (Keyboard.GetState().IsKeyDown(Keys.Q) || Keyboard.GetState().IsKeyDown(Keys.Left))
-            { playerPosition.X -= playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
-            #endregion
-
-            #region COOLDOWN
-            shootCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-            //blocks the timing at 0sec:
-            if (shootCooldown <= 0)
+            if (_gameState == GameState.MainMenu)
             {
-                shootCooldown = 0;
+                IsMouseVisible = true;
+
+               // if (Mouse.GetState().LeftButton == ButtonState.Pressed)
+                   // _gameState = GameState.Playing;
+
+                playButton.Update(gameTime, "play");
+                quitButton.Update(gameTime, "quit");
+
+                if (Keyboard.GetState().IsKeyDown(Keys.Escape))
+                    this.Exit();
+                if (Keyboard.GetState().IsKeyDown(Keys.Space))
+                    _gameState = GameState.Playing;
+
             }
-            #endregion
 
-            #region SHOOTING
-            //Pressing the spacebar
-            if (Keyboard.GetState().IsKeyDown(Keys.Space) && shootCooldown <= 0)
+            if (_gameState == GameState.Playing)
             {
-                //Creates a new rocket from a texture and a starting position.
-                ShootBullet(projectileSprite, new Vector2(playerPosition.X - 15.5f, 
-                    playerPosition.Y - 20));
+                IsMouseVisible = false;
+                #region DIRECTIONAL MOVING
+                if (Keyboard.GetState().IsKeyDown(Keys.Z) || Keyboard.GetState().IsKeyDown(Keys.Up))
+                { playerPosition.Y -= playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
+                if (Keyboard.GetState().IsKeyDown(Keys.D) || Keyboard.GetState().IsKeyDown(Keys.Right))
+                { playerPosition.X += playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
+                if (Keyboard.GetState().IsKeyDown(Keys.S) || Keyboard.GetState().IsKeyDown(Keys.Down))
+                { playerPosition.Y += playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
+                if (Keyboard.GetState().IsKeyDown(Keys.Q) || Keyboard.GetState().IsKeyDown(Keys.Left))
+                { playerPosition.X -= playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
+                #endregion
 
-                //Sets every Projectile to "isOnScreen" after shooting (spacebar)
-                foreach(Projectile p in projectilesOnScreen)
+                #region COOLDOWN
+                shootCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+                //blocks the timing at 0sec:
+                if (shootCooldown <= 0)
                 {
-                    p._isOnScreen = true;
+                    shootCooldown = 0;
+                }
+                #endregion
+
+                #region SHOOTING
+                //Pressing the spacebar
+                if (Keyboard.GetState().IsKeyDown(Keys.Space) && shootCooldown <= 0)
+                {
+                    //Creates a new rocket from a texture and a starting position.
+                    ShootBullet(projectileSprite, new Vector2(playerPosition.X + 6, playerPosition.Y));
+
+                    //Sets every Projectile to "isOnScreen" after shooting (spacebar)
+                    foreach (Projectile p in projectilesOnScreen)
+                    {
+                        p._isOnScreen = true;
+                    }
+
+                    //Shooting sound
+                    shootSound.Play();
+                    shootCooldown = 1.0f;
                 }
 
-                //Shooting sound
-                shootSound.Play();
-                shootCooldown = 1.0f;
-            }
+                playerCollibox = new Rectangle((int)playerPosition.X, (int)playerPosition.Y, (int)playerSprite.Width, (int)playerSprite.Height);
 
-            //Update() method call for any Rocket that is on the screen, so that they move.
-            foreach (Projectile p in projectilesOnScreen) {
+                //Update() method call for any Rocket that is on the screen, so that they move.
+                foreach (Projectile p in projectilesOnScreen)
+                {
 
-                //Moves the rocket as long as it's on the screen (after shooting and before hitting an enemy)
-                if (p._isOnScreen) {
-                    p.Update(gameTime);
-                }
-                    
-                //ForEach used to manage collisions between Enemies and Projectiles
-                foreach (Enemy e in Enemy.enemiesOnScreen) {
-                    if (p._collisionBox.Intersects(e._collisionBox)) {
-                        score += 10;
-                        enemyDeathSoundInstance.Play();
-                        enemyDeathSoundInstance.Pause();
-                        p._hasHitEnemy = true;
-                        e._isDead = true;
+                    //Moves the rocket as long as it's on the screen (after shooting and before hitting an enemy)
+                    if (p._isOnScreen)
+                    {
+                        p.Update(gameTime);
+                    }
+                    else { }
+
+                    //ForEach used to manage collisions between Enemies and Projectiles
+                    foreach (Enemy e in Enemy.enemiesOnScreen)
+                    {
+                        if (p._collisionBox.Intersects(e._collisionBox))
+                        {
+                            score += 10;
+                            enemyDeathSoundInstance.Play();
+                            enemyDeathSoundInstance.Pause();
+                            p._hasHitEnemy = true;
+                            e._isDead = true;
+                        }
                     }
                 }
-            }
 
-            //Only updates Enemies movement if the Enemy isn't dead
-            foreach (Enemy e in Enemy.enemiesOnScreen) {
-                if (e._isDead) {
-                    //Basically sets the enemy collision box to "null". Can't do it explicitely because Rectangle is a struct.
-                    e._collisionBox = Rectangle.Empty;
+                //Only updates Enemies movement if the Enemy isn't dead
+                foreach (Enemy e in Enemy.enemiesOnScreen)
+                {
+                    if (e._isDead)
+                    {
+                        //Basically sets the enemy collision box to "null". Can't do it explicitely because Rectangle is a struct.
+                        e._collisionBox = Rectangle.Empty;
+                    }
+                    else
+                    {
+                        e.Update(gameTime);
+                    }
+
                 }
-                else {
-                    e.Update(gameTime);
-                }     
-            }
 
-            #endregion
+                #endregion
 
-            #region ENVIRONMENT
-            //Makes the stars crolling with random speeds
-            foreach (Star s in starsOnScreen)
-            {
-                _randomStarSpeedY = randomStarPos.NextDouble() * (1f - 0.00001f) + 0.00001f;
-                s.Update(gameTime, _randomStarSpeedY);
+                #region ENVIRONMENT
+                //Makes the stars crolling with random speeds
+                foreach (Star s in starsOnScreen)
+                {
+                    _randomStarSpeedY = randomStarPos.NextDouble() * (1f - 0.00001f) + 0.00001f;
+                    s.Update(gameTime, _randomStarSpeedY);
+                }
+                #endregion
+
+                
             }
-            #endregion
 
             #region SYSTEM
+
             //Exits the game when pressing Esc
+            if (_gameState == GameState.Quit)
+                Exit();
+
             if (Keyboard.GetState().IsKeyDown(Keys.Escape))
             { Exit(); }
             #endregion
@@ -304,59 +386,82 @@ namespace GetGoodMonogame
         protected override void Draw(GameTime gameTime)
         {
             graphics.GraphicsDevice.Clear(Color.Black);
-
-            //Anything drawn on the screen between .Begin() and .End()
             spriteBatch.Begin();
 
-            #region ENVIRONMENT
-            //Draws each star of the collection initially
-            foreach (Star s in starsOnScreen)
-            {
-                s.Draw(gameTime, spriteBatch);
+            if (_gameState == GameState.MainMenu)
+            {             
+                spriteBatch.Draw(mainMenuBackground, Vector2.Zero, Color.White);
+                playButton.Draw(spriteBatch);
+                quitButton.Draw(spriteBatch);
+                
             }
 
-            //Draws each Enemy of the collection only if he's not dead
-            foreach (Enemy e in Enemy.enemiesOnScreen)
+            if (_gameState == GameState.Playing)
             {
-                if (e._isDead) { }
-                else {
-                    //Debug draw. Draws the enemy collision box in Green.
-                    //spriteBatch.Draw(rectEnemy, e._position, Color.White);
-                    e.Draw(gameTime, spriteBatch);
-                }
-            }
-            #endregion
-
-            #region SCREEN
-            spriteBatch.Draw(rocketIcon, rocketIconPos, Color.White);
-
-            //Draws the cooldown string in green if player canShoot
-            if (shootCooldown == 0.0f)
-                spriteBatch.DrawString(gameFont, "Cooldown: " + shootCooldown.ToString("F2") + " sec", new Vector2(rocketIconPos.X + 28, 578), Color.Green);
-            else
-                spriteBatch.DrawString(gameFont, "Cooldown: " + shootCooldown.ToString("F2") + " sec", new Vector2(rocketIconPos.X + 28, 578), Color.White);
-            
-            spriteBatch.DrawString(gameFont, "Score: " + score.ToString(), new Vector2(0, 0), Color.White);
-            #endregion
-
-            #region PLAYER
-            spriteBatch.Draw(playerSprite, playerPosition, null, Color.White, 0f, new Vector2(playerSprite.Width / 2, playerSprite.Height / 2),
-                Vector2.One, SpriteEffects.None, 0.1f);
-
-            //Draws the projectile if is shot (onScreen) and it hasn't hit an enemy yet (!hasHitEnemy)
-            foreach(Projectile p in projectilesOnScreen)
-            {
-                if (p._isOnScreen && !p._hasHitEnemy)
+                #region ENVIRONMENT
+                //Draws each star of the collection initially
+                foreach (Star s in starsOnScreen)
                 {
-                    //Debug draw. Draws the projectile collision box in green.
-                    //spriteBatch.Draw(rectProjectile, new Vector2(p._position.X + 12, p._position.Y), Color.White);
-                    p.Draw(gameTime, spriteBatch);
+                    s.Draw(gameTime, spriteBatch);
                 }
-            }
-            
-            #endregion
 
-           
+                //Draws each Enemy of the collection only if he's not dead
+                foreach (Enemy e in Enemy.enemiesOnScreen)
+                {
+                    //Si l'ennemi est mort, on ne draw rien
+                    if (e._isDead) { }
+                    //Sinon, l'ennemi n'est pas mort, donc là on le draw
+                    else
+                    {
+                        //Debug draw. Draws the enemy collision box in Green.
+                        //spriteBatch.Draw(rectEnemy, e._position, Color.White);
+                        e.Draw(gameTime, spriteBatch);
+                    }
+
+                    //Si un ennemi rentre en collision avec le joueur
+                    if (e._collisionBox.Intersects(playerCollibox))
+                    {
+
+                        //Gameover, life decrement, etc
+                    }
+                }
+                #endregion
+
+                #region SCREEN
+                spriteBatch.Draw(rocketIcon, rocketIconPos, Color.White);
+
+                //Draws the cooldown string in green if player canShoot
+                if (shootCooldown == 0.0f)
+                    spriteBatch.DrawString(gameFont, "Cooldown: " + shootCooldown.ToString("F2") + " sec", new Vector2(rocketIconPos.X + 28, 578), Color.Green);
+                else
+                    spriteBatch.DrawString(gameFont, "Cooldown: " + shootCooldown.ToString("F2") + " sec", new Vector2(rocketIconPos.X + 28, 578), Color.White);
+
+                spriteBatch.DrawString(gameFont, "Score: " + score.ToString(), new Vector2(0, 0), Color.White);
+                #endregion
+
+                #region PLAYER
+                //Debug draw (player collision box in green)
+                //spriteBatch.Draw(rectPlayer, playerPosition, Color.White);
+                spriteBatch.Draw(playerSprite, playerPosition, Color.White);
+
+                //Draws the projectile if is shot (onScreen) and it hasn't hit an enemy yet (!hasHitEnemy)
+                foreach (Projectile p in projectilesOnScreen)
+                {
+                    if (p._isOnScreen && !p._hasHitEnemy)
+                    {
+                        //Debug draw. Draws the projectile collision box in green.
+                        //spriteBatch.Draw(rectProjectile, new Vector2(p._position.X + 12, p._position.Y), Color.White);
+                        p.Draw(gameTime, spriteBatch);
+                    }
+                    else
+                    {
+
+                    }
+                }
+
+                #endregion
+                
+            }
 
             spriteBatch.End();
 
