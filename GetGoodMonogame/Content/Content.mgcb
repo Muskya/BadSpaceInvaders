@@ -146,3 +146,9 @@
 /processorParam:TextureFormat=Color
 /build:quitButtonNone.jpg
 
+#begin playerDeath.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:playerDeath.wav
+

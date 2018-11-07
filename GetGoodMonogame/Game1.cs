@@ -98,11 +98,14 @@ namespace GetGoodMonogame
 
         //PLAYER PROPERTIES
         #region PLAYER
+        private SoundEffect playerDeath;
+        private SoundEffectInstance playerDeathInstance;
         private float playerSpeed = 250.0f; //Ship's moving value
         private Vector2 playerPosition; //Handles the player's position during the whole game
         private Texture2D playerSprite;
         private Rectangle playerCollibox;
         private float shootCooldown; //Cooldown value between each shots
+        private bool playerIsDead;
         #endregion
 
         #endregion
@@ -175,6 +178,8 @@ namespace GetGoodMonogame
             shootCooldown = 1.5f; //Default shooting cooldown
             playerSprite = Content.Load<Texture2D>("ship");
             playerCollibox = new Rectangle((int)playerPosition.X, (int)playerPosition.Y, (int)playerSprite.Width, (int)playerSprite.Height);
+            playerDeath = Content.Load<SoundEffect>("playerDeath");
+            playerDeathInstance = playerDeath.CreateInstance();
             #endregion
 
             //ENVIRONMENT INITIALIZATION
@@ -238,9 +243,6 @@ namespace GetGoodMonogame
         protected override void LoadContent()
         {
             spriteBatch = new SpriteBatch(GraphicsDevice);
-
-            //PLAYER CONTENT LOAD:
-
             //SOUND CONTENT LOAD:
             shootSound = Content.Load<SoundEffect>("shootSound");
 
@@ -259,31 +261,26 @@ namespace GetGoodMonogame
             {
                 IsMouseVisible = true;
 
-               // if (Mouse.GetState().LeftButton == ButtonState.Pressed)
-                   // _gameState = GameState.Playing;
-
                 playButton.Update(gameTime, "play");
                 quitButton.Update(gameTime, "quit");
-
-                if (Keyboard.GetState().IsKeyDown(Keys.Escape))
-                    this.Exit();
-                if (Keyboard.GetState().IsKeyDown(Keys.Space))
-                    _gameState = GameState.Playing;
-
             }
 
             if (_gameState == GameState.Playing)
             {
                 IsMouseVisible = false;
+
                 #region DIRECTIONAL MOVING
-                if (Keyboard.GetState().IsKeyDown(Keys.Z) || Keyboard.GetState().IsKeyDown(Keys.Up))
-                { playerPosition.Y -= playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
-                if (Keyboard.GetState().IsKeyDown(Keys.D) || Keyboard.GetState().IsKeyDown(Keys.Right))
-                { playerPosition.X += playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
-                if (Keyboard.GetState().IsKeyDown(Keys.S) || Keyboard.GetState().IsKeyDown(Keys.Down))
-                { playerPosition.Y += playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
-                if (Keyboard.GetState().IsKeyDown(Keys.Q) || Keyboard.GetState().IsKeyDown(Keys.Left))
-                { playerPosition.X -= playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
+                if (!playerIsDead)
+                {
+                    if (Keyboard.GetState().IsKeyDown(Keys.Z) || Keyboard.GetState().IsKeyDown(Keys.Up))
+                    { playerPosition.Y -= playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
+                    if (Keyboard.GetState().IsKeyDown(Keys.D) || Keyboard.GetState().IsKeyDown(Keys.Right))
+                    { playerPosition.X += playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
+                    if (Keyboard.GetState().IsKeyDown(Keys.S) || Keyboard.GetState().IsKeyDown(Keys.Down))
+                    { playerPosition.Y += playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
+                    if (Keyboard.GetState().IsKeyDown(Keys.Q) || Keyboard.GetState().IsKeyDown(Keys.Left))
+                    { playerPosition.X -= playerSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds; }
+                }                
                 #endregion
 
                 #region COOLDOWN
@@ -297,7 +294,7 @@ namespace GetGoodMonogame
 
                 #region SHOOTING
                 //Pressing the spacebar
-                if (Keyboard.GetState().IsKeyDown(Keys.Space) && shootCooldown <= 0)
+                if ((Keyboard.GetState().IsKeyDown(Keys.Space) && shootCooldown <= 0) && !playerIsDead)
                 {
                     //Creates a new rocket from a texture and a starting position.
                     ShootBullet(projectileSprite, new Vector2(playerPosition.X + 6, playerPosition.Y));
@@ -350,9 +347,15 @@ namespace GetGoodMonogame
                     }
                     else
                     {
+                        if (e._collisionBox.Intersects(playerCollibox))
+                        {
+                            playerCollibox = Rectangle.Empty;
+                            playerDeathInstance.Play();
+                            playerDeathInstance.Pause();
+                            playerIsDead = true;
+                        }
                         e.Update(gameTime);
                     }
-
                 }
 
                 #endregion
@@ -365,8 +368,6 @@ namespace GetGoodMonogame
                     s.Update(gameTime, _randomStarSpeedY);
                 }
                 #endregion
-
-                
             }
 
             #region SYSTEM
@@ -392,8 +393,7 @@ namespace GetGoodMonogame
             {             
                 spriteBatch.Draw(mainMenuBackground, Vector2.Zero, Color.White);
                 playButton.Draw(spriteBatch);
-                quitButton.Draw(spriteBatch);
-                
+                quitButton.Draw(spriteBatch); 
             }
 
             if (_gameState == GameState.Playing)
@@ -442,8 +442,12 @@ namespace GetGoodMonogame
                 #region PLAYER
                 //Debug draw (player collision box in green)
                 //spriteBatch.Draw(rectPlayer, playerPosition, Color.White);
-                spriteBatch.Draw(playerSprite, playerPosition, Color.White);
+                if (playerIsDead)  {
 
+                } else  {
+                    spriteBatch.Draw(playerSprite, playerPosition, Color.White);
+                }
+                     
                 //Draws the projectile if is shot (onScreen) and it hasn't hit an enemy yet (!hasHitEnemy)
                 foreach (Projectile p in projectilesOnScreen)
                 {
@@ -453,8 +457,7 @@ namespace GetGoodMonogame
                         //spriteBatch.Draw(rectProjectile, new Vector2(p._position.X + 12, p._position.Y), Color.White);
                         p.Draw(gameTime, spriteBatch);
                     }
-                    else
-                    {
+                    else {
 
                     }
                 }
