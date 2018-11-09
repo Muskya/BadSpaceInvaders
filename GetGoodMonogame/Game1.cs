@@ -14,6 +14,7 @@ namespace GetGoodMonogame
 {
     public class Game1 : Game
     {
+        //Test liaison nouvelle branche pour vagues de monstres
         #region PROPERTIES
         //SCREEN PROPERTIES
         #region SCREEN
@@ -55,9 +56,7 @@ namespace GetGoodMonogame
 
         //CLASSES INSTANCIATIONS AND PROPERTIES
         #region CLASSES
-        List<Projectile> projectilesOnScreen; //Rockets shot on the screen
         List<Star> starsOnScreen; //Infinite-scrolling stars on the screen
-        List<Enemy> enemiesOnScreen; //Enemies on the screen
 
         //Random variable to set random X and Y star positions
         Random randomStarPos;
@@ -68,6 +67,7 @@ namespace GetGoodMonogame
         private Texture2D projectileSprite;
         private Texture2D enemySprite;
         private Rectangle enemyCollibox;
+        private float cooldownWaves;
 
         //Debug-purpose textures. (Green collision boxes)
         private Texture2D rectEnemy;
@@ -123,9 +123,7 @@ namespace GetGoodMonogame
             Content.RootDirectory = "Content";
 
             //Initialize shooting and environment lists for display.
-            projectilesOnScreen = new List<Projectile>();
             starsOnScreen = new List<Star>();
-            enemiesOnScreen = new List<Enemy>();
         }
 
         // ######## INITIALIZE METHOD ######## //
@@ -186,6 +184,7 @@ namespace GetGoodMonogame
             #region ENVIRONMENT
             star1 = Content.Load<Texture2D>("star1"); //Stars sprite loaded
             randomStarPos = new Random();
+            cooldownWaves = 5.0f;
 
             //FOR LOOP STARS - Creating all the screen's stars with random positions and speed
             for (int i = 0; i < 20; i++)
@@ -196,13 +195,9 @@ namespace GetGoodMonogame
                 RandomStars(star1, this._randomPosX, this._randomPosY, this._randomStarSpeedY);
             }
 
-            //Loads the enemy sprite before creating some of them
+            //Loading enemie sprites
             enemySprite = Content.Load<Texture2D>("enemy");
-            for (int i = 0; i < 12; i++)
-            {
-                enemyCollibox = new Rectangle(0, 0, (int)enemySprite.Width, (int)enemySprite.Height);
-                SpawnMonster(enemySprite, new Vector2(30 + (i * 37), 20), enemyCollibox);
-            }
+            
             #endregion
 
             //GAMEPLAY INITIALIZATION
@@ -299,36 +294,44 @@ namespace GetGoodMonogame
                     //Creates a new rocket from a texture and a starting position.
                     ShootBullet(projectileSprite, new Vector2(playerPosition.X + 6, playerPosition.Y));
 
-                    //Sets every Projectile to "isOnScreen" after shooting (spacebar)
-                    foreach (Projectile p in projectilesOnScreen)
-                    {
-                        p._isOnScreen = true;
-                    }
-
                     //Shooting sound
                     shootSound.Play();
                     shootCooldown = 1.0f;
                 }
 
                 playerCollibox = new Rectangle((int)playerPosition.X, (int)playerPosition.Y, (int)playerSprite.Width, (int)playerSprite.Height);
+                cooldownWaves -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+                //Quand le cooldown de waves est à 0 (on créer une nouvelle vague)
+                if (cooldownWaves <= 0)
+                {
+                    for (int i = 0; i < 12; i++)
+                    {
+                        SpawnMonsterWave(enemySprite, new Vector2(30 + (i * 37), 20));
+                    }
+
+                    cooldownWaves = 3.0f;
+                }
 
                 //Update() method call for any Rocket that is on the screen, so that they move.
-                foreach (Projectile p in projectilesOnScreen)
+                foreach (Projectile p in Projectile.projectilesOnScreen)
                 {
-
+                    //Console.WriteLine(p._position.Y);
                     //Moves the rocket as long as it's on the screen (after shooting and before hitting an enemy)
-                    if (p._isOnScreen)
+                    if (p._hasHitEnemy == false && p._isOnScreen == true)
                     {
                         p.Update(gameTime);
                     }
-                    else { }
+                    else {
+                        p._collisionBox = Rectangle.Empty;
+                    }
 
                     //ForEach used to manage collisions between Enemies and Projectiles
                     foreach (Enemy e in Enemy.enemiesOnScreen)
                     {
                         if (p._collisionBox.Intersects(e._collisionBox))
                         {
-                            score += 10;
+                            score += 15;
                             enemyDeathSoundInstance.Play();
                             enemyDeathSoundInstance.Pause();
                             p._hasHitEnemy = true;
@@ -340,7 +343,7 @@ namespace GetGoodMonogame
                 //Only updates Enemies movement if the Enemy isn't dead
                 foreach (Enemy e in Enemy.enemiesOnScreen)
                 {
-                    if (e._isDead)
+                    if (e._isDead == true)
                     {
                         //Basically sets the enemy collision box to "null". Can't do it explicitely because Rectangle is a struct.
                         e._collisionBox = Rectangle.Empty;
@@ -349,11 +352,12 @@ namespace GetGoodMonogame
                     {
                         if (e._collisionBox.Intersects(playerCollibox))
                         {
-                            playerCollibox = Rectangle.Empty;
                             playerDeathInstance.Play();
                             playerDeathInstance.Pause();
                             playerIsDead = true;
+                            playerCollibox = Rectangle.Empty;
                         }
+
                         e.Update(gameTime);
                     }
                 }
@@ -417,13 +421,6 @@ namespace GetGoodMonogame
                         //spriteBatch.Draw(rectEnemy, e._position, Color.White);
                         e.Draw(gameTime, spriteBatch);
                     }
-
-                    //Si un ennemi rentre en collision avec le joueur
-                    if (e._collisionBox.Intersects(playerCollibox))
-                    {
-
-                        //Gameover, life decrement, etc
-                    }
                 }
                 #endregion
 
@@ -436,34 +433,31 @@ namespace GetGoodMonogame
                 else
                     spriteBatch.DrawString(gameFont, "Cooldown: " + shootCooldown.ToString("F2") + " sec", new Vector2(rocketIconPos.X + 28, 578), Color.White);
 
+                spriteBatch.DrawString(gameFont, "Wave CD: " + cooldownWaves.ToString("F2") + " sec", new Vector2(345, 578), Color.White);
                 spriteBatch.DrawString(gameFont, "Score: " + score.ToString(), new Vector2(0, 0), Color.White);
                 #endregion
 
                 #region PLAYER
                 //Debug draw (player collision box in green)
                 //spriteBatch.Draw(rectPlayer, playerPosition, Color.White);
-                if (playerIsDead)  {
+                if (playerIsDead == true)  {
 
-                } else  {
+                } else {
                     spriteBatch.Draw(playerSprite, playerPosition, Color.White);
                 }
                      
                 //Draws the projectile if is shot (onScreen) and it hasn't hit an enemy yet (!hasHitEnemy)
-                foreach (Projectile p in projectilesOnScreen)
+                foreach (Projectile p in Projectile.projectilesOnScreen)
                 {
-                    if (p._isOnScreen && !p._hasHitEnemy)
+                    if (p._hasHitEnemy == false && p._isOnScreen == true)
                     {
                         //Debug draw. Draws the projectile collision box in green.
-                        //spriteBatch.Draw(rectProjectile, new Vector2(p._position.X + 12, p._position.Y), Color.White);
+                        spriteBatch.Draw(rectProjectile, new Vector2(p._position.X + 12, p._position.Y), Color.White);
                         p.Draw(gameTime, spriteBatch);
                     }
-                    else {
-
-                    }
+                    else if (p._hasHitEnemy == true){ } 
+                    else if (!p._isOnScreen == false){ }
                 }
-
-                #endregion
-                
             }
 
             spriteBatch.End();
@@ -478,7 +472,7 @@ namespace GetGoodMonogame
         public void ShootBullet(Texture2D texture, Vector2 startPos)
         {
             Projectile projectile = new Projectile(texture, startPos);
-            projectilesOnScreen.Add(projectile);
+            Projectile.projectilesOnScreen.Add(projectile);
         }
 
         //SPAWNING STARS IN THE ENVIRONMENT (Called in Initialize() method, because nothing interacts with that)
@@ -489,11 +483,15 @@ namespace GetGoodMonogame
         }
 
         //SPAWNING MONSTERS IN THE ENVIRONMENT
-        public void SpawnMonster(Texture2D texture, Vector2 pos, Rectangle colliBox)
+        //SpawnMonsterWave(enemySprite, new Vector2(30 + (i * 37), 20), enemyCollibox);
+        public void SpawnMonsterWave(Texture2D texture, Vector2 pos)
         {
-            Enemy enemy = new Enemy(texture, pos, colliBox);
+            enemyCollibox = new Rectangle(0, 0, (int)enemySprite.Width, (int)enemySprite.Height);
+            Enemy enemy = new Enemy(texture, pos, enemyCollibox);
             Enemy.enemiesOnScreen.Add(enemy);
         }
+
         #endregion
     }
 }
+#endregion

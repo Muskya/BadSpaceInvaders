@@ -20,7 +20,7 @@ namespace GetGoodMonogame
 
         public Rectangle _collisionBox;
 
-        public bool _isOnScreen = false;
+        public bool _isOnScreen = true;
         public bool _hasHitEnemy = false;
 
         //POUR LE MOMENT, LES PROJECTILES NE SONT PAS "DETRUITS" LORSQU'ILS SORTENT DE L'ECRAN
@@ -39,6 +39,11 @@ namespace GetGoodMonogame
 
         public void Update(GameTime gameTime)
         {
+            if (this._position.Y < -30)
+                _isOnScreen = false;
+            else
+                _isOnScreen = true;
+
             this._position.Y -= 5;
 
             this._collisionBox = new Rectangle((int)this._position.X + 12, (int)this._position.Y, (int)this._texture.Width - 24, (int)this._texture.Height);
