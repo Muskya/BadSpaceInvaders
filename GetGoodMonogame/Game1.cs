@@ -24,8 +24,8 @@ namespace GetGoodMonogame
         private Texture2D mainMenuBackground;
 
         //window's dimensions:
-        private int screen_width = 500; 
-        private int screen_height = 600;
+        private static int screen_width = 500; 
+        private static int screen_height = 600;
 
         Button quitButton, playButton;
         private Texture2D noneQuitButtonTexture, hoverQuitButtonTexture, nonePlayButtonTexture, hoverPlayButtonTexture;
@@ -37,12 +37,15 @@ namespace GetGoodMonogame
         private Texture2D fireModeIcon;
         private bool singleFireMode = true;
 
-        private int score;
+        private static int score;
+        public static int deathCount = 0;
+        public static int enemiesKilled = 0;
         #endregion
 
         //GAME PROPERTIES
         #region GAME
         private SpriteFont gameFont;
+        
 
         public enum GameState {
             MainMenu = 0,
@@ -98,14 +101,14 @@ namespace GetGoodMonogame
 
         //PLAYER PROPERTIES
         #region PLAYER
-        private SoundEffect playerDeath;
-        private SoundEffectInstance playerDeathInstance;
+        private static SoundEffect playerDeath;
+        private static SoundEffectInstance playerDeathInstance;
         private float playerSpeed = 250.0f; //Ship's moving value
-        private Vector2 playerPosition; //Handles the player's position during the whole game
+        private static Vector2 playerPosition; //Handles the player's position during the whole game
         private Texture2D playerSprite;
         private Rectangle playerCollibox;
         private float shootCooldown; //Cooldown value between each shots
-        private bool playerIsDead;
+        private static bool playerIsDead;
         #endregion
 
         #endregion
@@ -136,8 +139,8 @@ namespace GetGoodMonogame
             bgmInstance = bgm.CreateInstance();
 
             //Played() and IsLooped here because nothing interacts with the bgm to enable it
-            //bgmInstance.IsLooped = true;
-            //bgmInstance.Play();
+            bgmInstance.IsLooped = true;
+            bgmInstance.Play();
 
             enemyDeathSound = Content.Load<SoundEffect>("enemyDeath");
             enemyDeathSoundInstance = enemyDeathSound.CreateInstance();
@@ -184,7 +187,7 @@ namespace GetGoodMonogame
             #region ENVIRONMENT
             star1 = Content.Load<Texture2D>("star1"); //Stars sprite loaded
             randomStarPos = new Random();
-            cooldownWaves = 5.0f;
+            cooldownWaves = 6.0f;
 
             //FOR LOOP STARS - Creating all the screen's stars with random positions and speed
             for (int i = 0; i < 20; i++)
@@ -245,15 +248,14 @@ namespace GetGoodMonogame
             gameFont = Content.Load<SpriteFont>("gameFont");
             rocketIcon = Content.Load<Texture2D>("rocket");
             fireModeIcon = Content.Load<Texture2D>("firemode");
-
         }
+
         // ######## UNLOAD CONTENT METHOD ######## //
         protected override void UnloadContent(){}
 
         // ######## UPDATE METHOD ######## //
         protected override void Update(GameTime gameTime)
         {
-
             if (_gameState == GameState.MainMenu)
             {
                 IsMouseVisible = true;
@@ -289,14 +291,12 @@ namespace GetGoodMonogame
                 else if (playerPosition.Y < 0)
                     playerPosition.Y = 1;
 
-                
                 #endregion
 
                 #region COOLDOWN
                 shootCooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
                 //blocks the timing at 0sec:
-                if (shootCooldown <= 0)
-                {
+                if (shootCooldown <= 0) {
                     shootCooldown = 0;
                 }
                 #endregion
@@ -315,13 +315,13 @@ namespace GetGoodMonogame
                         ShootBullet(projectileSprite, new Vector2(playerPosition.X + 6.5f, playerPosition.Y));
                         //Shooting sound
                         shootSound.Play();
-                        shootCooldown = 1.0f;
+                        shootCooldown = 0.5f;
 
                     } else if (singleFireMode == false) {
                         //Créer les trois roquettes dans la liste
                         ShootBulletBurst(projectileSprite, new Vector2(playerPosition.X + 6.5f, playerPosition.Y));
                         shootSound.Play();
-                        shootCooldown = 2.0f;
+                        shootCooldown = 1.60f;
                     }                
                 }
                     
@@ -364,6 +364,7 @@ namespace GetGoodMonogame
                             enemyDeathSoundInstance.Pause();
                             p._hasHitEnemy = true;
                             e._isDead = true;
+                            enemiesKilled++;
                         }
                     }
                 }
@@ -388,6 +389,7 @@ namespace GetGoodMonogame
                             enemyDeathSoundInstance.Pause();
                             p._hasHitEnemy = true;
                             e._isDead = true;
+                            enemiesKilled++;
                         }
                     }
                 }
@@ -404,16 +406,16 @@ namespace GetGoodMonogame
                     {
                         if (e._collisionBox.Intersects(playerCollibox))
                         {
-                            playerDeathInstance.Play();
-                            playerDeathInstance.Pause();
                             playerIsDead = true;
+                            deathCount++;
                             playerCollibox = Rectangle.Empty;
+                            _gameState = GameState.MainMenu;
+                            playerDeath.Play();
                         }
 
                         e.Update(gameTime);
                     }
-                }
-                
+                }  
                 #endregion
 
                 #region ENVIRONMENT
@@ -439,7 +441,9 @@ namespace GetGoodMonogame
             base.Update(gameTime);
         }
 
-        // ######## DRAW METHOD ######### //
+        // ################################## DRAW METHOD ################################## //
+        // ################################## DRAW METHOD ################################## //
+        // ################################## DRAW METHOD ################################## //
         protected override void Draw(GameTime gameTime)
         {
             graphics.GraphicsDevice.Clear(Color.Black);
@@ -454,6 +458,7 @@ namespace GetGoodMonogame
 
             if (_gameState == GameState.Playing)
             {
+
                 #region ENVIRONMENT
                 //Draws each star of the collection initially
                 foreach (Star s in starsOnScreen)
@@ -500,6 +505,8 @@ namespace GetGoodMonogame
 
                 spriteBatch.DrawString(gameFont, "Wave CD: " + cooldownWaves.ToString("F2") + " sec", new Vector2(345, 578), Color.White);
                 spriteBatch.DrawString(gameFont, "Score: " + score.ToString(), new Vector2(0, 0), Color.White);
+                spriteBatch.DrawString(gameFont, "Deaths: " + deathCount.ToString(), new Vector2(0, 20), Color.White);
+                spriteBatch.DrawString(gameFont, "Killed: " + enemiesKilled.ToString(), new Vector2(410, 0), Color.White);
                 #endregion
 
                 #region PLAYER
@@ -554,14 +561,12 @@ namespace GetGoodMonogame
 
         public void ShootBulletBurst(Texture2D texture, Vector2 startPos)
         {
-            Projectile projectileLeft = new Projectile(texture, new Vector2(startPos.X - 15, startPos.Y + 17), -0.60f);
+            Projectile projectileLeft = new Projectile(texture, new Vector2(startPos.X - 15, startPos.Y + 17), -0.50f);
             Projectile projectileMiddle = new Projectile(texture, startPos, 0);
-            Projectile projectileRight = new Projectile(texture, new Vector2(startPos.X + 20, startPos.Y), 0.60f);
+            Projectile projectileRight = new Projectile(texture, new Vector2(startPos.X + 20, startPos.Y), 0.50f);
             Projectile.projectilesBurst.Add(projectileRight);
             Projectile.projectilesBurst.Add(projectileLeft);
-            Projectile.projectilesBurst.Add(projectileMiddle);
-            
-            
+            Projectile.projectilesBurst.Add(projectileMiddle);  
         }
 
         //SPAWNING STARS IN THE ENVIRONMENT (Called in Initialize() method, because nothing interacts with that)
@@ -580,6 +585,16 @@ namespace GetGoodMonogame
             Enemy.enemiesOnScreen.Add(enemy);
         }
 
+        public static void NewGame()
+        {
+            playerIsDead = false;
+            score = 0;
+            enemiesKilled = 0;
+            playerPosition = new Vector2(screen_width/2, screen_height/2);
+            Projectile.projectilesOnScreen.Clear();
+            Projectile.projectilesBurst.Clear();
+            Enemy.enemiesOnScreen.Clear();
+        }
         #endregion
     }
 }

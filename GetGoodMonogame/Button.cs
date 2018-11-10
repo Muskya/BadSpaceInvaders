@@ -48,7 +48,11 @@ namespace GetGoodMonogame
                 _state = State.Hover;
 
                 if (button == "play" && Mouse.GetState().LeftButton == ButtonState.Pressed)
+                {
                     Game1._gameState = Game1.GameState.Playing;
+                    Game1.NewGame();
+                }
+                    
                 else if (button == "quit" && Mouse.GetState().LeftButton == ButtonState.Pressed)
                     Game1._gameState = Game1.GameState.Quit;
                     
